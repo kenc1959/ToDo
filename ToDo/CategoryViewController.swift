@@ -7,40 +7,35 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
     
      //MARK - data source
-    var categoryArray = [Category]()
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("category.phist")
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    var categories : Results<Category>?
+    let realm = try! Realm()
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        loadCategory()
+        //loadCategory()
     }
     
     //MARK - data manipulation
-    func loadCategory(with request: NSFetchRequest<Category> = Category.fetchRequest()) {
+    func loadCategory() {
 
-        do {
-            
-            categoryArray = try context.fetch(request)
-            
-        } catch {
-            
-            print("Error loading data from context \(error)")
-            
-        }
+        categories = realm.objects(Category.self)
+        
         tableView.reloadData()
     }
     
-    func saveCategory() {
+    func saveCategory(category: Category) {
         do {
-            try context.save()
-            
+            try realm.write {
+                realm.add(category)
+            }
         } catch {
             print("Error core data save: \(error)")
         }
@@ -58,13 +53,11 @@ class CategoryViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             // what will happen once user clicks the Add Item button on our UIAlert
             
-            let todoCategory = Category(context: self.context)
+            let todoCategory = Category()
             
             todoCategory.name = newCategoryText.text!
             
-            self.categoryArray.append(todoCategory)
-            
-            self.saveCategory()
+            self.saveCategory(category: todoCategory)
             
         }
         
@@ -82,14 +75,14 @@ class CategoryViewController: UITableViewController {
     //MARK - tableview delegate
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        return categories?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        cell.textLabel?.text = categoryArray[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "Press + to add watchlist"
         
         return cell
     }
@@ -97,7 +90,6 @@ class CategoryViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         performSegue(withIdentifier: "gotoItems", sender: self)
-        
         
     }
     
@@ -111,8 +103,9 @@ class CategoryViewController: UITableViewController {
             
             if let indexPath = tableView.indexPathForSelectedRow {
                 
-                destinationVC.selectedCategory = categoryArray[indexPath.row]
+                destinationVC.selectedCategory = categories![indexPath.row]
             }
         }
     }
+ 
 }
